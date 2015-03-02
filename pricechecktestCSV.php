@@ -20,7 +20,7 @@
 	<table>
 <?php
 	//globals
-	$csvFile = "/Users/chwang/GitHub Projects/iTunesPriceTracker/IDs.csv"; //enter a CSV file location here
+	$csvFile = ""; //enter a CSV file location here
 	
 	$start_time = microtime(true); //!benchmarking
 
