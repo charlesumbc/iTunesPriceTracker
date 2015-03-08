@@ -12,4 +12,6 @@ https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web
 
 2. **Extract the ID from the URL:** Once you have the URL, the ID is the digits after "id" in the URL.
 
+3. **Use my JavaScript helper:** It's in the URLtoID directory.
+
 For the regex pattern: id(.+)\?
