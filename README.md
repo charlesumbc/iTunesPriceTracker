@@ -1,6 +1,6 @@
-# iTunesPriceTracker
+# iTunesPriceChecker
 
-The beginnings of an iTunes price tracker using iTunes Search API lookups. Written in PHP.
+An iTunes price checker using iTunes Search API lookups and a CSV file. Written in PHP.
 
 For more information on the iTunes Search API:
 https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html
