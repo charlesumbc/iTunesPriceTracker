@@ -14,4 +14,4 @@ https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web
 
 3. **Use my JavaScript helper:** It's in the URLtoID directory.
 
-For the regex pattern: id(.+)\?
+For the regex pattern: id(.+)
