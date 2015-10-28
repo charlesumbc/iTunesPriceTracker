@@ -1,16 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<script type="text/javascript">
-        function transform() {
-            var url = document.getElementById("url").value;
-            var pattern = /id(.+)\?/;
-            var results = pattern.exec(url);
-            var id = results[1];
-            var idField = document.getElementById("id");
-            idField.value = id;
-        }
-        </script>
+		<script type="text/javascript" src="javascript/URLtoID.js"></script>
 		<title> URL to ID Transformation </title>
 	</head>
 	
