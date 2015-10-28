@@ -1,14 +1,12 @@
 <!--!IMPORTANT!
-	Enter the location of your CSV file into $csvFile.
+	Enter the location of your CSV file into $CSVFile.
 	Should be just a one column CSV file with an iTunes ID on each row.
-	
-	Broke up code into functions.
-	I also learned about how globals work in PHP. Lesson learned.
 -->
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
 <head>
+	<link type="text/css" rel="stylesheet" href="stylesheet.css"/>
 	<!-- Initialize some things in PHP -->
 	<?php
 		date_default_timezone_set('EST');
@@ -17,59 +15,50 @@
 </head>
 
 <body>
-	<table>
 <?php
-	//globals
-	$csvFile = ""; //enter a CSV file location here
-	
-	$start_time = microtime(true); //!benchmarking
+	$CSVFile = ""; //--!!Enter your CSV file location here!!--
 
+	$benchmarking_on = false; //enable/disable benchmarking
+	$start_time = microtime(true); //for benchmarking
+	
 	/**
-	 * opens up a CSV file with a list of iTunes items and creates a string of IDs to enter into iTunes Search API lookup
-	 * $numIDs - number of IDs to put in the string
-	 * $readerLength - fgetcsv()'s length
-	 * returns a string of $numIDs of IDs
+	 * Turn the CSV into an array
+	 * $CSVFile - CSV file location
+	 * returns an associatve array holding the IDs and prices from the CSV file
 	 */
-	function createIDsString($numIDs, $readerLength) {
-		global $csvFile;
+	function createArrayFromCSV($CSVFile)
+	{
+		$CSVArray = array();
 		
-		$database = fopen($csvFile, 'r');
-		if ($database != FALSE) {
-			$count = 0;
-			$prevLine = 0;
-			//?instead of 100, use some kind of const
-			//this reads any column headers, if you decide to use column headers in your CSV file
-/* 			while (($line = fgetcsv($handle, 100, ",")) != FALSE) { */
-			//?instead of 50, use a const
-				while (($count < $numIDs) && (($line = fgetcsv($database, $readerLength, ",")) != FALSE)) {
-					if ($line[0] != '0') { //iTunes Search API returns 0 for nonexistent records, using 0 in my CSV for testing sake
-						$ids = $ids . "," . $line[0];
-						$count++;
-						$prevLine = $line[0];
-					}
-					/*
-					//Making sure 0's aren't read in.
-					else {
-						echo "Invalid ID: " . $line[0] . "<br>";
-					}
-					*/
-				}
-				$count = 0;
-/* 			} */
-			fclose($database);
+		$file_handle = fopen($CSVFile, 'r');
+		$line = fgetcsv($file_handle); //skip the first row/header row
+		while (($line = fgetcsv($file_handle)) !== false) 
+		{
+			$CSVArray[$line[0]] = $line[1];
 		}
-		else {
-			echo "Failed to open file.";
-		}
-		
-		//Long ID string
-		$ids = substr($ids, 1); //take off that last comma
-		//echo $ids, "<br>"; //!debug
-		return $ids;
+		fclose($file_handle);
+	
+		return $CSVArray;
 	}
 
 	/**
-	 * use cURL (Client URL Library) to get JSON objects from iTunes Search API
+	 * Creates a string of IDs to enter into iTunes Search API lookup
+	 * $numIDs - number of IDs to put in the string (iTunes Search API likes grouping searches in one query)
+	 * $CSVArray - array created from CSV file
+	 * returns a string of $numIDs of IDs
+	 */
+	function createIDsString($numIDs, $CSVArray) {
+		$keys = array_keys($CSVArray);
+		foreach ($keys as $key) {
+			$IDs = $IDs . "," . $key;
+		}
+		$IDs = substr($IDs, 1); //take off that first comma
+		
+		return $IDs;
+	}
+
+	/**
+	 * Use cURL (Client URL Library) to get JSON objects from iTunes Search API
 	 * $concatID - ID's to put into iTunes Search API URL
 	 * returns JSON objects as an array
 	 */
@@ -86,10 +75,12 @@
 	}
 	
 	/**
-	 * creates the info card of a given iTunes ID
+	 * Creates the info card of a given iTunes ID
 	 * $JSONResult - JSON objects to sort and break
+	 * $oldPrice - old price retrieved from the CSVArray
 	 */
-	function createInfo($JSONResult) {		
+	function createInfo($JSONResult, $oldPrice) {
+		$id = $JSONResult->collectionId;
 		$name = $JSONResult->collectionName;
 		$art = $JSONResult->artworkUrl100;
 		//if-then for HD collection pricing where applicable
@@ -98,6 +89,29 @@
 		else
 			$price = $JSONResult->collectionHdPrice;
 		
+		if ($oldPrice > $price) {
+		?>
+		<div class = "iTunesItemPriceDown">
+			<img src="<?= $art ?>"/> <br>
+			<a href="https://itunes.apple.com/lookup?id=<?=$id?>"><?= $name ?></a> <br>
+			$<?= $oldPrice ?> -> $<?= $price ?> <br>
+			<br>
+		</div>
+		<br>
+		<?
+		}
+		else if ($oldPrice < $price) {
+		?>
+		<div class = "iTunesItemPriceUp">
+			<img src="<?= $art ?>"/> <br>
+			<a href="https://itunes.apple.com/lookup?id=<?=$id?>"><?= $name ?></a> <br>
+			$<?= $oldPrice ?> -> $<?= $price ?> <br>
+			<br>
+		</div>
+		<br>
+		<?
+		}
+		else {
 		?>
 		<div class = "iTunesItem">
 			<img src="<?= $art ?>"/> <br>
@@ -106,23 +120,23 @@
 			<br>
 		</div>
 		<br>
-		<?				
+		<?
+		}			
 	}
 	
-	
-	// Where the action happens...
-	$IDList = createIDsString(50, 100);
-	$searchResults = getJSONObjects($IDList);
+	$CSVArray = createArrayFromCSV($CSVFile);
+	$IDString = createIDsString(50, $CSVArray);
+	$searchResults = getJSONObjects($IDString);
+	//TODO: resultCount can/will be different from how many ID's are in the string
 	for ($i = 0; $i < $searchResults->resultCount; $i++) {
-		//echo $i + 1, ": <br>";//!debug
-		createInfo($searchResults->results[$i]);
+		createInfo($searchResults->results[$i], $CSVArray[$searchResults->results[$i]->collectionId]);
 	}
 
-	$end_time = microtime(true); //!benchmarking
-	echo 'Total time to retrieve: ', $end_time - $start_time, ' s', "<br>"; //!benchmarking
-	
+	if ($benchmarking_on) {
+		$end_time = microtime(true); //for benchmarking
+		echo 'Total time to retrieve: ', $end_time - $start_time, ' s', "<br>"; //for benchmarking
+	}	
 ?>
-	</table>
 </body>
 
 </html>
